@@ -48,10 +48,12 @@ class BaseHandler(RequestHandler):
             easylog.exception('block_num:%d %s', block_num, e)
         return None
 
-    async def get_latest_info(self):
+    async def get_latest_info(self, only_cache=False):
         now_ts = time.time()
-        if now_ts - self.application.latest_block_info['ts'] < self.application.service_conf['get_info_sec'] + 0.1:
+        if now_ts - self.application.latest_block_info['ts'] < self.application.service_conf['get_info_sec'] + 0.05:
             return self.application.latest_block_info['info']
+        if only_cache:
+            return None
         info = await self.fetch_info()
         if info:
             self.application.latest_block_info['ts'], self.application.latest_block_info['info'] = time.time(), info

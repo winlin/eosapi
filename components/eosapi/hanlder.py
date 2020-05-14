@@ -59,13 +59,19 @@ class GetBlockIdHandler(BaseHandler):
         return None
 
     async def get(self):
+        ret_data = {"error":"retry again"}
         block_num = int(self.get_argument('block_num', default=0))
         if block_num == 0:
             latest_info = await self.get_latest_info()
             if not latest_info:
-                self.render_json({"error":"retry again"})
+                self.render_json(ret_data)
                 return
             block_num = latest_info['head_block_num']
+        else:
+            latest_info = await self.get_latest_info(only_cache=True)
+            if latest_info and latest_info['head_block_num'] < block_num:
+                self.render_json(ret_data)
+                return
 
         if block_num in self.application.local_cache:
             self.render_json(self.application.local_cache[block_num])
@@ -76,7 +82,7 @@ class GetBlockIdHandler(BaseHandler):
             self.application.local_cache[block_num] = {'id':block_id,'ts':time.time()}
             self.render_json(self.application.local_cache[block_num])
             return
-        self.render_json({"error":"retry again"})
+        self.render_json(ret_data)
 
 
 class GetInfoHandler(BaseHandler):
