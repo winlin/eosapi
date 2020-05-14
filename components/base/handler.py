@@ -3,6 +3,7 @@
 import time
 import ujson as json
 from tornado.web import RequestHandler
+from tornado.httpclient import AsyncHTTPClient
 from ipabase import easylog,IpaJsonEncoder,second2_str24h,object_method_time_usage
 
 
@@ -33,3 +34,27 @@ class BaseHandler(RequestHandler):
         except Exception as e:
             easylog.critical('%s', e)
 
+    async def fetch_info(self):
+        http_client = AsyncHTTPClient()
+        url = "%s/v1/chain/get_info" % (self.application.service_conf['eoshost'])
+        try:
+            result = await http_client.fetch(url)
+            if result.code / 100 != 2:
+                easylog.error("Failed to get_info error:%s", result.body)
+                return None
+            data = json.loads(result.body)
+            return data
+        except Exception as e:
+            easylog.exception('block_num:%d %s', block_num, e)
+        return None
+
+    async def get_latest_info(self):
+        now_ts = time.time()
+        if now_ts - self.application.latest_block_info['ts'] < self.application.service_conf['get_info_sec'] + 0.1:
+            return self.application.latest_block_info['info']
+        info = await self.fetch_info()
+        if info:
+            self.application.latest_block_info['ts'], self.application.latest_block_info['info'] = time.time(), info
+            return self.application.latest_block_info['info']
+        return None
+        

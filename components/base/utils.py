@@ -21,6 +21,7 @@ class Application(tornado.web.Application):
                 )
         tornado.web.Application.__init__(self, handler_map, **settings)
         self.local_cache = {}
+        self.latest_block_info = {'ts':0, 'info':None}
         self.service_conf = service_conf
 
 
@@ -32,7 +33,7 @@ def start_httpserver(handler_map, opts):
 
     app = Application(handler_map, opts, service_conf)
     
-    fetch_th = threading.Thread(target=start_fetch_blockid, args=(app.local_cache, app.service_conf))
+    fetch_th = threading.Thread(target=start_fetch_blockid, args=(app.local_cache, app.service_conf, app.latest_block_info))
     fetch_th.start()
 
     app.listen(opts.port)
