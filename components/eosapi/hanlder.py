@@ -25,7 +25,8 @@ def start_fetch_blockid(id_dict, conf_dict, latest_block_info):
             if result['head_block_num'] in id_dict and result['head_block_id'] == id_dict[result['head_block_num']]['id']:
                 continue
             easylog.info('%d : %s', result['head_block_num'], result['head_block_id'])
-            id_dict[result['head_block_num']] = {'id':result['head_block_id'],'ts':time.time()}
+            id_dict[result['head_block_num']] = {'id':result['head_block_id'],'timestamp':result['head_block_time'],
+                                                            'block_num':result['head_block_num'],'ts':time.time()}
 
             nums = list(id_dict.keys())
             if now_ts-last_clean_ts > id_dict_size/2 and len(nums)>id_dict_size:
@@ -53,7 +54,7 @@ class GetBlockIdHandler(BaseHandler):
                 easylog.error("Failed to get %d error:%s", block_num, result.body)
                 return None
             data = json.loads(result.body)
-            return data['id']
+            return data
         except Exception as e:
             easylog.exception('block_num:%d %s', block_num, e)
         return None
@@ -77,9 +78,10 @@ class GetBlockIdHandler(BaseHandler):
             self.render_json(self.application.local_cache[block_num])
             return
 
-        block_id = await self.fetch_block(block_num)
-        if block_id:
-            self.application.local_cache[block_num] = {'id':block_id,'ts':time.time()}
+        block = await self.fetch_block(block_num)
+        if block:
+            self.application.local_cache[block_num] = {'id':block['id'],'timestamp':block['timestamp'],
+                                                            'block_num':block['block_num'],'ts':time.time()}
             self.render_json(self.application.local_cache[block_num])
             return
         self.render_json(ret_data)
@@ -95,7 +97,9 @@ class GetInfoHandler(BaseHandler):
             self.render_json({'head_block_id':latest_info['head_block_id'],
                               'chain_id':latest_info['chain_id'],
                               'head_block_time':latest_info['head_block_time'],
-                              'head_block_producer':latest_info['head_block_producer']})
+                              'head_block_producer':latest_info['head_block_producer'],
+                              'head_block_num':latest_info['head_block_num'],
+                              'ts':time.time()})
             return
         self.render_json({"error":"retry again"})
 
